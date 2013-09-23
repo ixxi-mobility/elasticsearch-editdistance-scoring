@@ -3,7 +3,7 @@ package biz.ixxi.script;
 import org.elasticsearch.common.Nullable;
 import org.elasticsearch.script.ExecutableScript;
 import org.elasticsearch.script.NativeScriptFactory;
-import org.elasticsearch.script.AbstractDoubleSearchScript;
+import org.elasticsearch.script.AbstractFloatSearchScript;
 import org.elasticsearch.common.xcontent.support.XContentMapValues;
 import org.elasticsearch.ElasticSearchIllegalArgumentException;
 import org.elasticsearch.common.logging.ESLogger;
@@ -15,7 +15,7 @@ import org.apache.lucene.search.spell.LevensteinDistance;
 import java.util.Map;
 import java.lang.Math;
 
-public class EditDistanceScript extends AbstractDoubleSearchScript {
+public class EditDistanceScript extends AbstractFloatSearchScript {
 
     public static class Factory implements NativeScriptFactory {
 
@@ -40,23 +40,19 @@ public class EditDistanceScript extends AbstractDoubleSearchScript {
     }
 
     @Override
-    public double runAsDouble() {
-        ESLogger logger = Loggers.getLogger(EditDistanceScript.class);
-        logger.info("************** pouet ****************");
-        logger.info(searchString);
-        ScriptDocValues.Strings fieldData = (ScriptDocValues.Strings) doc().get(fieldName);
-        logger.info(fieldData.getValues().toString());
-        String target = fieldData.getValue();
-        logger.info(target);
+    public float runAsFloat() {
+        Float r;
+        // ESLogger logger = Loggers.getLogger(EditDistanceScript.class);
+        // logger.info("************** pouet ****************");
+        String target = (String)source().get(fieldName);
         if (target == null || searchString == null) {
-            return 0;
-        }
-        LevensteinDistance builder = new LevensteinDistance();
-        float distance = builder.getDistance(target, searchString);
-        if (distance == 0) {
-            return 1;
+            r = 0.0f;
         } else {
-            return 1 / distance;
+            LevensteinDistance builder = new LevensteinDistance();
+            r = builder.getDistance(target, searchString);
         }
+        Float f = score() * r;
+        // logger.info(searchString + " " + target + " " + r.toString() + " " + score() + " " + f);
+        return f;
     }
 }

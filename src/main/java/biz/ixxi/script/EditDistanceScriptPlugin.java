@@ -3,16 +3,16 @@ package biz.ixxi.script;
 import org.elasticsearch.plugins.AbstractPlugin;
 import org.elasticsearch.script.ScriptModule;
 
-public class IxxiScriptPlugin extends AbstractPlugin {
+public class EditDistanceScriptPlugin extends AbstractPlugin {
 
     @Override
     public String name() {
-        return "ixxi-script";
+        return "editdistance-script";
     }
 
     @Override
     public String description() {
-        return "Ixxi scripts";
+        return "Editdistance based script for custom scoring";
     }
 
     public void onModule(ScriptModule module) {
