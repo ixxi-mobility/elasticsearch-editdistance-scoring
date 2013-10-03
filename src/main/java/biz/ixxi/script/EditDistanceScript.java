@@ -33,26 +33,68 @@ public class EditDistanceScript extends AbstractFloatSearchScript {
 
     private final String fieldName;
     private final String searchString;
+    private Float finalScore;
+    ESLogger logger;
 
     public EditDistanceScript(String fieldName, String searchString){
         this.fieldName = fieldName;
         this.searchString = searchString;
+        this.logger = Loggers.getLogger(EditDistanceScript.class);
     }
 
     @Override
     public float runAsFloat() {
-        Float r;
-        // ESLogger logger = Loggers.getLogger(EditDistanceScript.class);
-        // logger.info("************** pouet ****************");
-        String target = (String)source().get(fieldName);
-        if (target == null || searchString == null) {
-            r = 0.0f;
-        } else {
-            LevensteinDistance builder = new LevensteinDistance();
-            r = builder.getDistance(target, searchString);
+        logger.info("************** runAsFloat ****************");
+        finalScore = score();
+        logger.info("finalScore at runAsFloat init " + finalScore);
+        // logger.info(doc().toString());
+        // logger.info(name.getValues().toString());
+        // String candidate = (String)source().get(fieldName);
+        ScriptDocValues.Strings name = (ScriptDocValues.Strings) doc().get(fieldName);
+        String candidate = name.getValues().get(0);
+        if (candidate == null || searchString == null) {
+            return 0.0f;
         }
-        Float f = score() * r;
-        // logger.info(searchString + " " + target + " " + r.toString() + " " + score() + " " + f);
-        return f;
+        String[] partials = searchString.split(" ");
+        for (String partial: partials) {
+            partialRun(partial, candidate);
+        }
+        // logger.info(searchString + " " + candidate + " " + r.toString() + " " + score() + " " + f);
+        logger.info("finalScore " + finalScore.toString());
+        return finalScore;
     }
+
+    public void partialRun(String partial, String candidate) {
+        Float r = Float.NaN;
+        if (candidate.contains(partial)) {
+            r = 1.0f;
+        } else {
+            logger.info("Comparing " + partial + " and " + candidate);
+            LevensteinDistance builder = new LevensteinDistance();
+            Integer index = guessBestPart(partial, candidate);
+            if (index != -1) {
+                Integer endIndex = index + partial.length() > candidate.length() -1 ? candidate.length() - 1 : index + partial.length();
+                String candidatePartial = candidate.substring(index, endIndex);
+                r = builder.getDistance(candidatePartial, partial);
+                logger.info("r for " + partial + " and " + candidatePartial + " => " + r.toString());
+            }
+        }
+        logger.info("r " + r.toString() + " " + finalScore);
+        if (!Float.isNaN(r)) {
+            finalScore = finalScore * r;
+        }
+    }
+
+    private Integer guessBestPart(String partial, String candidate) {
+        Integer index = -1;
+        while (partial.length() > 2) {
+            partial = partial.substring(0, partial.length() - 1);
+            index = candidate.indexOf(partial);
+            if (index != -1) {
+                break;
+            }
+        }
+        return index;
+    }
+
 }
