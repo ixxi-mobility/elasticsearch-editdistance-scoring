@@ -3,10 +3,10 @@
 	<modelVersion>4.0.0</modelVersion>
 
 	<groupId>biz.ixxi</groupId>
-	<artifactId>elasticsearch-editdistance-script</artifactId>
+	<artifactId>elasticsearch-editdistance-scoring</artifactId>
 	<version>0.0.1</version>
 	<packaging>jar</packaging>
-	<name>Editdistance script for scoring</name>
+	<name>ElasticSearch script for scoring by editdistance</name>
 
 	<properties>
 		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
