@@ -34,19 +34,20 @@ public class EditDistanceScript extends AbstractFloatSearchScript {
     private final String fieldName;
     private final String searchString;
     private Float finalScore;
-    ESLogger logger;
+    private Integer previousEndIndex;
+    // ESLogger logger;
 
     public EditDistanceScript(String fieldName, String searchString){
         this.fieldName = fieldName;
         this.searchString = searchString;
-        this.logger = Loggers.getLogger(EditDistanceScript.class);
+        // this.logger = Loggers.getLogger(EditDistanceScript.class);
     }
 
     @Override
     public float runAsFloat() {
-        logger.info("************** runAsFloat ****************");
-        finalScore = score();
-        logger.info("finalScore at runAsFloat init " + finalScore);
+        // logger.info("************** runAsFloat ****************");
+        finalScore = 1.0f;
+        previousEndIndex = 0;
         // logger.info(doc().toString());
         // logger.info(name.getValues().toString());
         // String candidate = (String)source().get(fieldName);
@@ -55,32 +56,42 @@ public class EditDistanceScript extends AbstractFloatSearchScript {
         if (candidate == null || searchString == null) {
             return 0.0f;
         }
+        // logger.info("finalScore before for " + candidate + " and " + searchString + " => " + finalScore);
         String[] partials = searchString.split(" ");
         for (String partial: partials) {
             partialRun(partial, candidate);
         }
         // logger.info(searchString + " " + candidate + " " + r.toString() + " " + score() + " " + f);
-        logger.info("finalScore " + finalScore.toString());
-        return finalScore;
+        // logger.info("finalScore " + finalScore.toString());
+        return finalScore + (score() / 100);
     }
 
     public void partialRun(String partial, String candidate) {
         Float r = Float.NaN;
+        Integer endIndex = -1;
+        Integer index = -1;
         if (candidate.contains(partial)) {
             r = 1.0f;
+            index = candidate.indexOf(partial);
+            endIndex = index + partial.length();
         } else {
-            logger.info("Comparing " + partial + " and " + candidate);
-            LevensteinDistance builder = new LevensteinDistance();
-            Integer index = guessBestPart(partial, candidate);
+            // logger.info("Comparing " + partial + " and " + candidate);
+            index = guessBestPart(partial, candidate);
             if (index != -1) {
-                Integer endIndex = index + partial.length() > candidate.length() -1 ? candidate.length() - 1 : index + partial.length();
+                Integer nextSpace = candidate.indexOf(" ", index);
+                endIndex = nextSpace != -1 ? nextSpace : candidate.length() - 1;
                 String candidatePartial = candidate.substring(index, endIndex);
+                LevensteinDistance builder = new LevensteinDistance();
                 r = builder.getDistance(candidatePartial, partial);
-                logger.info("r for " + partial + " and " + candidatePartial + " => " + r.toString());
+                // logger.info("r for " + partial + " and " + candidatePartial + " => " + r.toString());
             }
         }
-        logger.info("r " + r.toString() + " " + finalScore);
+        // logger.info("r " + r.toString() + " " + finalScore);
         if (!Float.isNaN(r)) {
+            if (index - previousEndIndex < 3 && index - previousEndIndex > 0) {
+                r = r * 1.4f;
+            }
+            previousEndIndex = endIndex;
             finalScore = finalScore * r;
         }
     }
