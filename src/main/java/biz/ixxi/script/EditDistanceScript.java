@@ -37,7 +37,7 @@ public class EditDistanceScript extends AbstractFloatSearchScript {
     private Integer previousEndIndex;
     // ESLogger logger;
 
-    public EditDistanceScript(String fieldName, String searchString){
+    public EditDistanceScript(String fieldName, String searchString) {
         this.fieldName = fieldName;
         this.searchString = searchString;
         // this.logger = Loggers.getLogger(EditDistanceScript.class);
@@ -61,9 +61,9 @@ public class EditDistanceScript extends AbstractFloatSearchScript {
         for (String partial: partials) {
             partialRun(partial, candidate);
         }
-        // logger.info(searchString + " " + candidate + " " + r.toString() + " " + score() + " " + f);
-        // logger.info("finalScore " + finalScore.toString());
-        return finalScore + (score() / 100);
+        finalScore = finalScore + (score() / 100);
+        // logger.info(searchString + " " + candidate + " " + score() + " / " + finalScore.toString());
+        return finalScore;
     }
 
     public void partialRun(String partial, String candidate) {

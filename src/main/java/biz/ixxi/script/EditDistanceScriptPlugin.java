@@ -7,7 +7,7 @@ public class EditDistanceScriptPlugin extends AbstractPlugin {
 
     @Override
     public String name() {
-        return "editdistance-script";
+        return "editdistance-scoring";
     }
 
     @Override
