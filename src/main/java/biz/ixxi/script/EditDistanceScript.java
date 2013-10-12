@@ -71,7 +71,7 @@ public class EditDistanceScript extends AbstractFloatSearchScript {
         Integer endIndex = -1;
         Integer index = -1;
         if (candidate.contains(partial)) {
-            r = 1.0f;
+            r = 1.1f;
             index = candidate.indexOf(partial);
             endIndex = index + partial.length();
         } else {
