@@ -118,14 +118,15 @@ public class EditDistanceScript extends AbstractFloatSearchScript {
     private float getDistance(String target, String other) {
         StringDistance builder;
         if ("ngram".equals(algo)) {
-            builder = new NGramDistance();
+            builder = (NGramDistance) new NGramDistance();
         } else if ("jarowinkler".equals(algo)) {
-            builder = new JaroWinklerDistance();
+            builder = (JaroWinklerDistance) new JaroWinklerDistance();
         } else if ("lucene".equals(algo)) {
-            builder = new LuceneLevenshteinDistance();
+            builder = (LuceneLevenshteinDistance) new LuceneLevenshteinDistance();
         } else {
-            builder = new LevensteinDistance();
+            builder = (LevensteinDistance) new LevensteinDistance();
         }
+        // logger.info("Algo " + builder.toString() + " " + target + " / " + other + " => " + builder.getDistance(target, other));
         return builder.getDistance(target, other);
     }
 
