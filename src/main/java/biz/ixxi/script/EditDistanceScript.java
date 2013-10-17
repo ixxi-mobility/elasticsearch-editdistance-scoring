@@ -11,6 +11,10 @@ import org.elasticsearch.common.logging.Loggers;
 import org.elasticsearch.index.fielddata.ScriptDocValues;
 
 import org.apache.lucene.search.spell.LevensteinDistance;
+import org.apache.lucene.search.spell.NGramDistance;
+import org.apache.lucene.search.spell.JaroWinklerDistance;
+import org.apache.lucene.search.spell.LuceneLevenshteinDistance;
+import org.apache.lucene.search.spell.StringDistance;
 
 import java.util.Map;
 import java.lang.Math;
@@ -23,10 +27,11 @@ public class EditDistanceScript extends AbstractFloatSearchScript {
         public ExecutableScript newScript(@Nullable Map<String, Object> params) {
             String fieldName = params == null ? null : XContentMapValues.nodeStringValue(params.get("field"), null);
             String searchString = params == null ? "" : XContentMapValues.nodeStringValue(params.get("search"), "");
+            String algo = params == null ? "" : XContentMapValues.nodeStringValue(params.get("editdistance"), "levenstein");
             if (fieldName == null) {
                 throw new ElasticSearchIllegalArgumentException("Missing the field parameter");
             }
-            return new EditDistanceScript(fieldName, searchString);
+            return new EditDistanceScript(fieldName, searchString, algo);
         }
     }
 
@@ -35,12 +40,13 @@ public class EditDistanceScript extends AbstractFloatSearchScript {
     private final String searchString;
     private Float finalScore;
     private Integer previousEndIndex;
+    private String algo;
     // ESLogger logger;
 
-    public EditDistanceScript(String fieldName, String searchString) {
+    public EditDistanceScript(String fieldName, String searchString, String algo) {
         this.fieldName = fieldName;
         this.searchString = searchString;
-        // this.logger = Loggers.getLogger(EditDistanceScript.class);
+        this.algo = algo;
     }
 
     @Override
@@ -48,6 +54,7 @@ public class EditDistanceScript extends AbstractFloatSearchScript {
         // logger.info("************** runAsFloat ****************");
         finalScore = 1.0f;
         previousEndIndex = 0;
+        // logger = Loggers.getLogger(EditDistanceScript.class);
         // logger.info(doc().toString());
         // logger.info(name.getValues().toString());
         // String candidate = (String)source().get(fieldName);
@@ -82,7 +89,7 @@ public class EditDistanceScript extends AbstractFloatSearchScript {
                 endIndex = nextSpace != -1 ? nextSpace : candidate.length() - 1;
                 String candidatePartial = candidate.substring(index, endIndex);
                 LevensteinDistance builder = new LevensteinDistance();
-                r = builder.getDistance(candidatePartial, partial);
+                r = getDistance(candidatePartial, partial);
                 // logger.info("r for " + partial + " and " + candidatePartial + " => " + r.toString());
             }
         }
@@ -106,6 +113,20 @@ public class EditDistanceScript extends AbstractFloatSearchScript {
             }
         }
         return index;
+    }
+
+    private float getDistance(String target, String other) {
+        StringDistance builder;
+        if ("ngram".equals(algo)) {
+            builder = new NGramDistance();
+        } else if ("jarowinkler".equals(algo)) {
+            builder = new JaroWinklerDistance();
+        } else if ("lucene".equals(algo)) {
+            builder = new LuceneLevenshteinDistance();
+        } else {
+            builder = new LevensteinDistance();
+        }
+        return builder.getDistance(target, other);
     }
 
 }
