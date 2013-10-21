@@ -60,6 +60,7 @@ public class EditDistanceScript extends AbstractFloatSearchScript {
         // String candidate = (String)source().get(fieldName);
         ScriptDocValues.Strings name = (ScriptDocValues.Strings) doc().get(fieldName);
         String candidate = name.getValues().get(0);
+        // logger.info(candidate);
         if (candidate == null || searchString == null) {
             return 0.0f;
         }
@@ -97,6 +98,8 @@ public class EditDistanceScript extends AbstractFloatSearchScript {
         if (!Float.isNaN(r)) {
             if (index - previousEndIndex < 3 && index - previousEndIndex > 0) {
                 r = r * 1.4f;
+            } else if (index - previousEndIndex < 0) {
+                r = r * 0.9f;
             }
             previousEndIndex = endIndex;
             finalScore = finalScore * r;
