@@ -27,7 +27,7 @@ public class EditDistanceScript extends AbstractFloatSearchScript {
         public ExecutableScript newScript(@Nullable Map<String, Object> params) {
             String fieldName = params == null ? null : XContentMapValues.nodeStringValue(params.get("field"), null);
             String searchString = params == null ? "" : XContentMapValues.nodeStringValue(params.get("search"), "");
-            String algo = params == null ? "" : XContentMapValues.nodeStringValue(params.get("editdistance"), "levenstein");
+            String algo = params == null ? "" : XContentMapValues.nodeStringValue(params.get("editdistance"), "ngram");
             if (fieldName == null) {
                 throw new ElasticSearchIllegalArgumentException("Missing the field parameter");
             }
@@ -65,63 +65,16 @@ public class EditDistanceScript extends AbstractFloatSearchScript {
             return 0.0f;
         }
         // logger.info("finalScore before for " + candidate + " and " + searchString + " => " + finalScore);
-        String[] partials = searchString.split(" ");
-        for (String partial: partials) {
-            partialRun(partial, candidate);
-        }
+        finalScore = getDistance(searchString, candidate);
         finalScore = finalScore + (score() / 100);
         // logger.info(searchString + " " + candidate + " " + score() + " / " + finalScore.toString());
         return finalScore;
     }
 
-    public void partialRun(String partial, String candidate) {
-        Float r = Float.NaN;
-        Integer endIndex = -1;
-        Integer index = -1;
-        if (candidate.contains(partial)) {
-            r = 1.1f;
-            index = candidate.indexOf(partial);
-            endIndex = index + partial.length();
-        } else {
-            // logger.info("Comparing " + partial + " and " + candidate);
-            index = guessBestPart(partial, candidate);
-            if (index != -1) {
-                Integer nextSpace = candidate.indexOf(" ", index);
-                endIndex = nextSpace != -1 ? nextSpace : candidate.length() - 1;
-                String candidatePartial = candidate.substring(index, endIndex);
-                LevensteinDistance builder = new LevensteinDistance();
-                r = getDistance(candidatePartial, partial);
-                // logger.info("r for " + partial + " and " + candidatePartial + " => " + r.toString());
-            }
-        }
-        // logger.info("r " + r.toString() + " " + finalScore);
-        if (!Float.isNaN(r)) {
-            if (index - previousEndIndex < 3 && index - previousEndIndex > 0) {
-                r = r * 1.4f;
-            } else if (index - previousEndIndex < 0) {
-                r = r * 0.9f;
-            }
-            previousEndIndex = endIndex;
-            finalScore = finalScore * r;
-        }
-    }
-
-    private Integer guessBestPart(String partial, String candidate) {
-        Integer index = -1;
-        while (partial.length() > 2) {
-            partial = partial.substring(0, partial.length() - 1);
-            index = candidate.indexOf(partial);
-            if (index != -1) {
-                break;
-            }
-        }
-        return index;
-    }
-
     private float getDistance(String target, String other) {
         StringDistance builder;
-        if ("ngram".equals(algo)) {
-            builder = (NGramDistance) new NGramDistance();  // default size: 2
+        if ("levenstein".equals(algo)) {
+            builder = (LevensteinDistance) new LevensteinDistance();
         } else if ("ngram3".equals(algo)) {
             builder = (NGramDistance) new NGramDistance(3);
         } else if ("jarowinkler".equals(algo)) {
@@ -129,7 +82,7 @@ public class EditDistanceScript extends AbstractFloatSearchScript {
         } else if ("lucene".equals(algo)) {
             builder = (LuceneLevenshteinDistance) new LuceneLevenshteinDistance();
         } else {
-            builder = (LevensteinDistance) new LevensteinDistance();
+            builder = (NGramDistance) new NGramDistance();  // default size: 2
         }
         // logger.info("Algo " + builder.toString() + " " + target + " / " + other + " => " + builder.getDistance(target, other));
         return builder.getDistance(target, other);
