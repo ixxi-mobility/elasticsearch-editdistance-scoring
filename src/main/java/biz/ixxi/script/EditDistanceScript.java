@@ -38,7 +38,6 @@ public class EditDistanceScript extends AbstractFloatSearchScript {
 
     private final String fieldName;
     private final String searchString;
-    private Float finalScore;
     private Integer previousEndIndex;
     private String algo;
     // ESLogger logger;
@@ -52,8 +51,6 @@ public class EditDistanceScript extends AbstractFloatSearchScript {
     @Override
     public float runAsFloat() {
         // logger.info("************** runAsFloat ****************");
-        finalScore = 1.0f;
-        previousEndIndex = 0;
         // logger = Loggers.getLogger(EditDistanceScript.class);
         // logger.info(doc().toString());
         // logger.info(name.getValues().toString());
@@ -65,9 +62,9 @@ public class EditDistanceScript extends AbstractFloatSearchScript {
             return 0.0f;
         }
         // logger.info("finalScore before for " + candidate + " and " + searchString + " => " + finalScore);
-        finalScore = getDistance(searchString, candidate);
+        Float finalScore = getDistance(searchString, candidate);
         finalScore = finalScore + (score() / 100);
-        // logger.info(searchString + " " + candidate + " " + score() + " / " + finalScore.toString());
+        // logger.info(searchString + " | " + candidate + " | " + score() + " / " + finalScore.toString());
         return finalScore;
     }
 
