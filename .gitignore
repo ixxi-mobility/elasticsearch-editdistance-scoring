@@ -6,8 +6,9 @@
 *.exe
 *.o
 *.so
+*.iml
 target/
-target/
+.idea/
 .classpath
 .project
 .settings
