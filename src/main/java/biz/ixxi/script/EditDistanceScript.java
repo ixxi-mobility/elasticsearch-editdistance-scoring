@@ -3,7 +3,8 @@ package biz.ixxi.script;
 import org.apache.lucene.search.spell.*;
 import org.elasticsearch.ElasticsearchIllegalArgumentException;
 import org.elasticsearch.common.Nullable;
-import org.elasticsearch.common.xcontent.support.XContentMapValues;
+import org.elasticsearch.common.logging.ESLogger;
+import org.elasticsearch.common.logging.Loggers;
 import org.elasticsearch.index.fielddata.ScriptDocValues;
 import org.elasticsearch.script.AbstractFloatSearchScript;
 import org.elasticsearch.script.ExecutableScript;
@@ -11,69 +12,76 @@ import org.elasticsearch.script.NativeScriptFactory;
 
 import java.util.Map;
 
+import static org.elasticsearch.common.xcontent.support.XContentMapValues.nodeStringValue;
+
 public class EditDistanceScript extends AbstractFloatSearchScript {
 
-    public static class Factory implements NativeScriptFactory {
+    public enum Algorithm {
+        LEVENSTEIN, NGRAM3, JAROWINKLER, LUCENE, DEFAULT;
 
-        @Override
-        public ExecutableScript newScript(@Nullable Map<String, Object> params) {
-            String fieldName = params == null ? null : XContentMapValues.nodeStringValue(params.get("field"), null);
-            String searchString = params == null ? "" : XContentMapValues.nodeStringValue(params.get("search"), "");
-            String algo = params == null ? "" : XContentMapValues.nodeStringValue(params.get("editdistance"), "ngram");
-            if (fieldName == null) {
-                throw new ElasticsearchIllegalArgumentException("Missing the field parameter");
+        public Algorithm parse(String str) {
+            try {
+                return valueOf(str.toUpperCase());
+            } catch (IllegalArgumentException e) {
+                return DEFAULT;
             }
-            return new EditDistanceScript(fieldName, searchString, algo);
         }
     }
 
+    public static class Factory implements NativeScriptFactory {
+        @Override
+        public ExecutableScript newScript(@Nullable Map<String, Object> params) {
+            if (params == null) throw new ElasticsearchIllegalArgumentException("Missing parameters");
+            String fieldName = nodeStringValue(params.get("field"), null);
+            if (fieldName == null) throw new ElasticsearchIllegalArgumentException("Missing the field parameter");
+            String searchString = nodeStringValue(params.get("search"), null);
+            if (fieldName == null) throw new ElasticsearchIllegalArgumentException("Missing the search parameter");
+            String str = nodeStringValue(params.get("editdistance"), "NGRAM3").toUpperCase();
+            Algorithm algorithm = Algorithm.valueOf(str);
+            return new EditDistanceScript(fieldName, searchString, algorithm);
+        }
+    }
 
+    private static final ESLogger LOG = Loggers.getLogger(EditDistanceScript.class);
     private final String fieldName;
     private final String searchString;
-    private Integer previousEndIndex;
-    private String algo;
-    // ESLogger logger;
+    private Algorithm algorithm;
 
-    public EditDistanceScript(String fieldName, String searchString, String algo) {
+    public EditDistanceScript(String fieldName, String searchString, Algorithm algorithm) {
         this.fieldName = fieldName;
         this.searchString = searchString;
-        this.algo = algo;
+        this.algorithm = algorithm;
     }
 
     @Override
     public float runAsFloat() {
-        // logger.info("************** runAsFloat ****************");
-        // logger = Loggers.getLogger(EditDistanceScript.class);
-        // logger.info(doc().toString());
-        // logger.info(name.getValues().toString());
-        // String candidate = (String)source().get(fieldName);
         ScriptDocValues.Strings name = (ScriptDocValues.Strings) doc().get(fieldName);
         String candidate = name.getValues().get(0);
-        // logger.info(candidate);
-        if (candidate == null || searchString == null) {
-            return 0.0f;
-        }
-        // logger.info("finalScore before for " + candidate + " and " + searchString + " => " + finalScore);
+        if (candidate == null) return 0.0f;
         Float finalScore = getDistance(searchString, candidate);
         finalScore = finalScore + (score() / 100);
-        // logger.info(searchString + " | " + candidate + " | " + score() + " / " + finalScore.toString());
+        LOG.debug("distance[{}](searchString={},candidate={})={}", algorithm, searchString, candidate, finalScore);
         return finalScore;
     }
 
     private float getDistance(String target, String other) {
         StringDistance builder;
-        if ("levenstein".equals(algo)) {
-            builder = (LevensteinDistance) new LevensteinDistance();
-        } else if ("ngram3".equals(algo)) {
-            builder = (NGramDistance) new NGramDistance(3);
-        } else if ("jarowinkler".equals(algo)) {
-            builder = (JaroWinklerDistance) new JaroWinklerDistance();
-        } else if ("lucene".equals(algo)) {
-            builder = (LuceneLevenshteinDistance) new LuceneLevenshteinDistance();
-        } else {
-            builder = (NGramDistance) new NGramDistance();  // default size: 2
+        switch (algorithm) {
+            case LEVENSTEIN:
+                builder = new LevensteinDistance();
+                break;
+            case NGRAM3:
+                builder = new NGramDistance(3);
+                break;
+            case JAROWINKLER:
+                builder = new JaroWinklerDistance();
+                break;
+            case LUCENE:
+                builder = new LuceneLevenshteinDistance();
+                break;
+            default:
+                builder = new NGramDistance(); // default to NGRAM size 2
         }
-        // logger.info("Algo " + builder.toString() + " " + target + " / " + other + " => " + builder.getDistance(target, other));
         return builder.getDistance(target, other);
     }
 
