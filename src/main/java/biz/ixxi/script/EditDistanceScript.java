@@ -1,23 +1,15 @@
 package biz.ixxi.script;
 
+import org.apache.lucene.search.spell.*;
+import org.elasticsearch.ElasticsearchIllegalArgumentException;
 import org.elasticsearch.common.Nullable;
+import org.elasticsearch.common.xcontent.support.XContentMapValues;
+import org.elasticsearch.index.fielddata.ScriptDocValues;
+import org.elasticsearch.script.AbstractFloatSearchScript;
 import org.elasticsearch.script.ExecutableScript;
 import org.elasticsearch.script.NativeScriptFactory;
-import org.elasticsearch.script.AbstractFloatSearchScript;
-import org.elasticsearch.common.xcontent.support.XContentMapValues;
-import org.elasticsearch.ElasticSearchIllegalArgumentException;
-import org.elasticsearch.common.logging.ESLogger;
-import org.elasticsearch.common.logging.Loggers;
-import org.elasticsearch.index.fielddata.ScriptDocValues;
-
-import org.apache.lucene.search.spell.LevensteinDistance;
-import org.apache.lucene.search.spell.NGramDistance;
-import org.apache.lucene.search.spell.JaroWinklerDistance;
-import org.apache.lucene.search.spell.LuceneLevenshteinDistance;
-import org.apache.lucene.search.spell.StringDistance;
 
 import java.util.Map;
-import java.lang.Math;
 
 public class EditDistanceScript extends AbstractFloatSearchScript {
 
@@ -29,7 +21,7 @@ public class EditDistanceScript extends AbstractFloatSearchScript {
             String searchString = params == null ? "" : XContentMapValues.nodeStringValue(params.get("search"), "");
             String algo = params == null ? "" : XContentMapValues.nodeStringValue(params.get("editdistance"), "ngram");
             if (fieldName == null) {
-                throw new ElasticSearchIllegalArgumentException("Missing the field parameter");
+                throw new ElasticsearchIllegalArgumentException("Missing the field parameter");
             }
             return new EditDistanceScript(fieldName, searchString, algo);
         }
